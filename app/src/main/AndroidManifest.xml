@@ -10,9 +10,23 @@
         android:theme="@style/AppTheme">
         <activity android:name=".GameActivity">
             <intent-filter>
+                <action android:name="com.example.ross.GAMEACTIVITY" />
+
+                <category android:name="android.intent.category.DEFAULT" />
+            </intent-filter>
+        </activity>
+        <activity android:name=".HomeScreen">
+            <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
 
                 <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity>
+        <activity android:name=".ScoreScreen">
+            <intent-filter>
+                <action android:name="com.example.ross.SCORESCREEN" />
+
+                <category android:name="android.intent.category.DEFAULT" />
             </intent-filter>
         </activity>
     </application>

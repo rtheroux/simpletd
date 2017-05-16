@@ -1,5 +1,6 @@
 package com.example.ross.lopolytd;
 
+import android.content.Intent;
 import android.graphics.Point;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
@@ -75,6 +76,17 @@ public class GameActivity extends AppCompatActivity {
     protected void onResume() {
         super.onResume();
         surfaceView.onResume();  // tell surfaceview that it is running
+    }
+
+    public void showScoreScreen(int enemiesDestroyed){
+        Intent intent = new Intent(GameActivity.this, ScoreScreen.class);
+        //System.out.println(enemiesDestroyed);
+        String newString = Integer.toString(enemiesDestroyed);
+        String key = null;
+        intent.putExtra("score", newString);
+        startActivity(intent);
+        finish();
+
     }
 
 

@@ -1,9 +1,11 @@
 package com.example.ross.lopolytd;
 
 import android.content.Context;
+import android.content.Intent;
 import android.graphics.Canvas;
 import android.graphics.Paint;
 import android.graphics.Point;
+import android.media.MediaPlayer;
 import android.view.SurfaceHolder;
 import android.view.SurfaceView;
 
@@ -20,21 +22,18 @@ public class GameSurfaceView extends SurfaceView implements Runnable {
     boolean isRunning = false;     // true when activity is active and running
     private Thread thread = null;  // the thread that's doing the drawing.
 
+
     // note that this is NOT the main UI thread
     // we spawned this thread
 
     Paint paint = new Paint();
     Tower t;
-    GameMap gameMap = new GameMap();
+    GameMap gameMap = new GameMap(this, gameActivity, getContext());
     boolean paused;
 
     public GameSurfaceView(Context context) {
         super(context);
-        //t = new Tower(500, 500);
         gameActivity = (GameActivity) context;
-        //bug = new BugSprite(gameActivity);
-        gameMap.populateEnemyArray();
-
         paused = true;
 
     }
@@ -47,15 +46,24 @@ public class GameSurfaceView extends SurfaceView implements Runnable {
                 continue;
             }
 
-            // TODO: 4/20/2017 ask about keeping time/change if statement to something else
+            // TODO: 4/23/2017 make better arraylist for storing enemy spawn times
             // list of times, if time getTimekeeper() is in arraylist, populate enemy array
 
-            if (gameMap.getTimeKeeper() == 50 || gameMap.getTimeKeeper() == 100 || gameMap.getTimeKeeper() == 150 ){
+            if (gameMap.getTimeKeeper()%25 == 0){
                 gameMap.populateEnemyArray();
+            }
+
+            //spawning projectiles every fireRate frames if enemy is within range of tower
+            if(!gameMap.towerArrayList.isEmpty()) {
+                for (Tower t : gameMap.towerArrayList) {
+                    //System.out.println(t.getFirstClosestEnemy(gameMap.enemyArrayList));
+                    if ((gameMap.getTimeKeeper()+t.spawnTime) % t.fireRate == 0 && t.getFirstClosestEnemy(gameMap.enemyArrayList)!= null) {
+                        gameMap.populateProjectileArray(t, t.getFirstClosestEnemy(gameMap.enemyArrayList));
+                    }
+                }
             }
             Canvas canvas = surfaceHolder.lockCanvas();
 
-            // We're going to be doing a lot more things here.
             drawEverything(canvas);
 
             if (gameActivity.wasTouched){
@@ -67,10 +75,26 @@ public class GameSurfaceView extends SurfaceView implements Runnable {
             // Display our canvas
             surfaceHolder.unlockCanvasAndPost(canvas);
 
+
+            /*
+            Where we draw the enemies and projectiles if they're active, otherwise remove them from their respective arraylist
+            */
+
             if (paused != true) {   //if game isn't 'paused', draw enemies
                                     //moving the enemies -- kept in arraylist format for moving one at a time
-                for (Enemy e : gameMap.enemyArrayList) {
-                    e.moveToNextPoint();
+                for (int i = gameMap.enemyArrayList.size()-1; i >=0; i--){
+                    if (gameMap.enemyArrayList.get(i).active == true){
+                        gameMap.enemyArrayList.get(i).moveToNextPoint();
+                    }else{
+                        gameMap.removeEnemy(i);
+                    }
+                }
+                for (int i = gameMap.projectileArrayList.size()-1; i >=0; i--){ //TODO change :(for loop) to iterate backwards through the array and remove then
+                    if (gameMap.projectileArrayList.get(i).active == true){
+                        gameMap.projectileArrayList.get(i).moveTowardsEnemy(gameMap.enemyArrayList);
+                    }else{
+                        gameMap.removeProjectile(gameMap.projectileArrayList.get(i));
+                    }
                 }
                 //increments the timer that keeps track of placing drawing enemies
                 gameMap.incrementCheckTimeKeeper();
@@ -78,11 +102,11 @@ public class GameSurfaceView extends SurfaceView implements Runnable {
 
 
 
-            try {
-                Thread.sleep(10);
-            } catch (InterruptedException e) {
-                e.printStackTrace();
-            }
+//            try {
+//                Thread.sleep(9);
+//            } catch (InterruptedException e) {
+//                e.printStackTrace();
+//            }
         }
     }
 
@@ -95,9 +119,11 @@ public class GameSurfaceView extends SurfaceView implements Runnable {
                 paused = true;
             }
         }else {
-            gameMap.addTower(p, enemyPathList);
+            if (gameMap.addTower(p, enemyPathList)) {
+                MediaPlayer mp = MediaPlayer.create(getContext(), R.raw.blop);
+                mp.start();
+            }
         }
-        //System.out.println(p.x);
     }
 
     private void drawEverything(Canvas canvas){
@@ -106,11 +132,15 @@ public class GameSurfaceView extends SurfaceView implements Runnable {
         gameMap.drawPath(canvas);
         gameMap.drawTowers(canvas);
         gameMap.drawEnemies(canvas);
-
-        //canvas.drawCircle(DisplayAdvisor.maxX, DisplayAdvisor.maxY, 50, paint);
-//        worm.draw(canvas);
-//        bug.drawBug(canvas);
+        gameMap.drawProjectiles(canvas);
+        gameMap.drawTowerCount(canvas, getContext(), paused);
     }
+
+    public void showScoreScreen(int enemiesDestroyed){
+        isRunning = false;
+        gameActivity.showScoreScreen(enemiesDestroyed);
+    }
+
 
     public void onResume() {
         // We've become active.  Create a thread
